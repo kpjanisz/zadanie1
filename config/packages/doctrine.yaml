@@ -1,0 +1,73 @@
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+        # server_version comes from DATABASE_URL (?serverVersion=8.4) so the CLI and
+        # the web process always agree on the platform.
+        profiling_collect_backtrace: '%kernel.debug%'
+        charset: utf8mb4
+        default_table_options:
+            charset: utf8mb4
+            collation: utf8mb4_unicode_ci
+    orm:
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore
+        # Mapping is declared per module, not by scanning src/ — a new module must be
+        # registered here explicitly.
+        auto_mapping: false
+        mappings:
+            Product:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Product/Entity'
+                prefix: 'App\Product\Entity'
+                alias: Product
+            Category:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Category/Entity'
+                prefix: 'App\Category\Entity'
+                alias: Category
+            Notification:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Notification/Entity'
+                prefix: 'App\Notification\Entity'
+                alias: Notification
+            Security:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Security/Entity'
+                prefix: 'App\Security\Entity'
+                alias: Security
+            # App\Security\Entity\RefreshToken extends a mapped superclass that the
+            # bundle ships as XML; with auto_mapping disabled it must be registered
+            # explicitly or Doctrine sees an entity with no fields.
+            GesdinetJWTRefreshTokenBundle:
+                type: xml
+                is_bundle: true
+                dir: 'config/doctrine'
+                prefix: 'Gesdinet\JWTRefreshTokenBundle\Entity'
+
+when@test:
+    doctrine:
+        dbal:
+            # "TEST_TOKEN" is typically set by ParaTest
+            dbname_suffix: '_test%env(default::TEST_TOKEN)%'
+
+when@prod:
+    doctrine:
+        orm:
+            query_cache_driver:
+                type: pool
+                pool: doctrine.system_cache_pool
+            result_cache_driver:
+                type: pool
+                pool: doctrine.result_cache_pool
+
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool:
+                    adapter: cache.app
+                doctrine.system_cache_pool:
+                    adapter: cache.system

@@ -1,0 +1,6 @@
+framework:
+    mailer:
+        dsn: '%env(MAILER_DSN)%'
+        headers:
+            # Single source of the sender; no mail class has to know it.
+            From: '%env(MAILER_FROM)%'

@@ -1,0 +1,33 @@
+exception:
+    precondition_failed: 'Zasób zmienił się od czasu odczytu. Pobierz go ponownie i spróbuj jeszcze raz.'
+    category:
+        not_found: 'Kategoria "%id%" nie istnieje.'
+        code_taken: 'Kod kategorii "%code%" jest już zajęty.'
+        in_use: 'Kategoria "%id%" jest przypisana do %count% produktów i nie może zostać usunięta.'
+    product:
+        not_found: 'Produkt "%id%" nie istnieje.'
+        requires_category: 'Produkt musi należeć do co najmniej jednej kategorii.'
+    operation_log:
+        not_found: 'Wpis logu operacji "%id%" nie istnieje.'
+
+security:
+    account_disabled: 'Konto jest nieaktywne.'
+
+rate_limit:
+    too_many_requests: 'Zbyt wiele żądań. Spróbuj ponownie za chwilę.'
+
+mail:
+    layout:
+        brand: 'Products API'
+        footer: 'Wiadomość wygenerowana automatycznie. Prosimy na nią nie odpowiadać.'
+    notification:
+        intro: '%subjectType% #%subjectId% został %action%. Szczegóły poniżej.'
+
+notification:
+    action:
+        created: 'utworzony'
+        deleted: 'usunięty'
+        updated: 'zaktualizowany'
+    product:
+        changed:
+            subject: 'Produkt #%subjectId% został zapisany'

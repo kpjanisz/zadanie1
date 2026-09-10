@@ -1,0 +1,21 @@
+product:
+    name:
+        not_blank: 'Nazwa produktu jest wymagana.'
+        too_long: 'Nazwa produktu może mieć maksymalnie {{ limit }} znaków.'
+    price:
+        not_null: 'Cena jest wymagana.'
+        not_numeric: 'Cena musi być liczbą.'
+        not_positive: 'Cena musi być większa od zera.'
+    categories:
+        at_least_one: 'Produkt musi należeć do co najmniej jednej kategorii.'
+        duplicated: 'Lista kategorii zawiera duplikaty.'
+        invalid_id: 'Identyfikator kategorii musi być dodatnią liczbą całkowitą.'
+category:
+    code:
+        not_blank: 'Kod kategorii jest wymagany.'
+        too_long: 'Kod kategorii może mieć maksymalnie {{ limit }} znaków.'
+validator:
+    decimal:
+        not_numeric: 'Wartość musi być liczbą dziesiętną.'
+        scale: 'Dozwolone są maksymalnie {{ scale }} miejsca po przecinku.'
+        precision: 'Dozwolone jest maksymalnie {{ digits }} cyfr przed przecinkiem.'

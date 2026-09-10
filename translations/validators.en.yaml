@@ -1,0 +1,21 @@
+product:
+    name:
+        not_blank: 'Product name is required.'
+        too_long: 'Product name cannot be longer than {{ limit }} characters.'
+    price:
+        not_null: 'Price is required.'
+        not_numeric: 'Price must be a number.'
+        not_positive: 'Price must be greater than zero.'
+    categories:
+        at_least_one: 'A product must belong to at least one category.'
+        duplicated: 'The category list contains duplicates.'
+        invalid_id: 'A category id must be a positive integer.'
+category:
+    code:
+        not_blank: 'Category code is required.'
+        too_long: 'Category code cannot be longer than {{ limit }} characters.'
+validator:
+    decimal:
+        not_numeric: 'This value must be a decimal number.'
+        scale: 'At most {{ scale }} decimal places are allowed.'
+        precision: 'At most {{ digits }} digits before the decimal point are allowed.'

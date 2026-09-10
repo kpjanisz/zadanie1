@@ -1,0 +1,76 @@
+api_platform:
+    title: 'Products & Categories API'
+    description: 'REST API for products and categories with an extensible notification system.'
+    version: '1.0.0'
+
+    # Resources live in each module's Dto/ directory, not in the default
+    # src/Entity or src/ApiResource. A new module must be listed here.
+    mapping:
+        paths:
+            - '%kernel.project_dir%/src/Category/Dto'
+            - '%kernel.project_dir%/src/Product/Dto'
+            - '%kernel.project_dir%/src/Notification/Dto'
+
+    # Multi-word resources become /api/operation-logs rather than
+    # /api/operation_logs; single-word ones are unaffected.
+    path_segment_name_generator: api_platform.path_segment_name_generator.dash
+
+    formats:
+        jsonld: ['application/ld+json']
+        json: ['application/json']
+
+    # RFC 7396 merge-patch is the correct type for PATCH, but plain
+    # application/json is what most clients send; accepting both avoids a 415
+    # that looks like a broken endpoint.
+    patch_formats:
+        json: ['application/merge-patch+json', 'application/json']
+
+    # RFC 7807 Problem Details for every error response.
+    error_formats:
+        jsonproblem: ['application/problem+json']
+        jsonld: ['application/ld+json']
+
+    defaults:
+        stateless: true
+        pagination_enabled: true
+        pagination_items_per_page: 30
+        pagination_maximum_items_per_page: 100
+        # Client may size the page, but never beyond the maximum above.
+        pagination_client_items_per_page: true
+        cache_headers:
+            # Accept: representations differ by format, and so do their
+            # validators. Authorization: what a caller may see depends on it.
+            # Origin: CORS headers differ per origin.
+            #
+            # Content-Type is deliberately absent: it describes a REQUEST body,
+            # so on the cacheable methods this header applies to it says nothing.
+            vary: ['Accept', 'Authorization', 'Origin']
+
+    # Interactive docs and the OpenAPI export are development tools; they must not
+    # be reachable in production.
+    enable_docs: '%kernel.debug%'
+    enable_swagger_ui: '%kernel.debug%'
+    enable_re_doc: false
+    enable_entrypoint: '%kernel.debug%'
+
+    graphql:
+        enabled: false
+        graphiql:
+            enabled: false
+
+    # Domain exceptions carry no HTTP knowledge; the mapping lives here.
+    exception_to_status:
+        App\Category\Exception\CategoryNotFoundException: 404
+        App\Category\Exception\CategoryCodeAlreadyExistsException: 409
+        App\Category\Exception\CategoryInUseException: 409
+        App\Product\Exception\ProductNotFoundException: 404
+        App\Product\Exception\ProductRequiresCategoryException: 422
+        App\Notification\Exception\OperationLogNotFoundException: 404
+        # Concurrent write lost the version check — the client must re-read and retry.
+        Doctrine\ORM\OptimisticLockException: 409
+        # If-Match described a state the resource no longer has.
+        App\Shared\Exception\PreconditionFailedException: 412
+        # A payload the serializer cannot map (wrong JSON type for a field) is a
+        # client error, not a server fault. API Platform wraps the underlying
+        # NotNormalizableValueException, so the wrapper is what must be mapped.
+        Symfony\Component\Serializer\Exception\UnexpectedValueException: 400

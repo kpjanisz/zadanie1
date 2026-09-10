@@ -1,0 +1,99 @@
+name: zadanie-rekrutacyjne
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    # Run as the host user so vendor/, var/ and migrations/ stay editable on the host.
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - .:/app
+      - composer_cache:/tmp/composer
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    volumes:
+      - .:/app:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+
+  mysql:
+    image: mysql:8.4
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-app}
+      MYSQL_USER: ${MYSQL_USER:-app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-app}
+    ports:
+      # Exposed for a local GUI client; the app talks to `mysql:3306` inside the network.
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # Shared state that must NOT be local to an instance: rate-limiter counters,
+  # JWT revocation marks and spent refresh tokens. On a filesystem pool each
+  # replica keeps its own copy, which multiplies the rate limit by the number of
+  # replicas and lets a revoked user stay signed in wherever the mark never
+  # reached.
+  redis:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      # AOF: a restart must not wipe revocation marks and hand back sessions
+      # that were deliberately ended.
+      - --appendonly
+      - "yes"
+      # Deliberately noeviction. Silently dropping a revocation mark or a spent
+      # refresh token degrades security without a trace; refusing the write is
+      # loud and therefore safer. Capacity has to be sized instead — see README.
+      - --maxmemory
+      - "256mb"
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Catch-all SMTP sink. Notification e-mails are really sent and really delivered
+  # here — inspect them at http://localhost:8025 — but never leave the machine.
+  mailer:
+    image: axllent/mailpit:latest
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      MP_MAX_MESSAGES: 500
+
+volumes:
+  mysql_data:
+  composer_cache:
+  redis_data:

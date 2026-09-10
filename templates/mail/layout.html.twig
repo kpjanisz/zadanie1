@@ -1,0 +1,44 @@
+{# Master layout for all outgoing mail.
+
+   Table-based with inline CSS on purpose: Outlook (Word rendering engine) and
+   Gmail strip <style> blocks and ignore most modern layout, so flexbox/grid and
+   external stylesheets are not an option here. #}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{% block subject %}{% endblock %}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f5; font-family:Arial,Helvetica,sans-serif; color:#18181b;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
+    <tr>
+        <td align="center" style="padding:24px 12px;">
+
+            <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:100%; background-color:#ffffff; border-radius:6px; overflow:hidden;">
+                <tr>
+                    <td style="background-color:#1f2937; padding:20px 28px;">
+                        <span style="color:#ffffff; font-size:18px; font-weight:bold;">
+                            {{ 'mail.layout.brand'|trans }}
+                        </span>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:28px;">
+                        {% block content %}{% endblock %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="background-color:#f4f4f5; padding:16px 28px; font-size:12px; color:#6b7280;">
+                        {{ 'mail.layout.footer'|trans }}
+                    </td>
+                </tr>
+            </table>
+
+        </td>
+    </tr>
+</table>
+</body>
+</html>

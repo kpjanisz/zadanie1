@@ -1,0 +1,47 @@
+framework:
+    rate_limiter:
+        # Volumetric backstop per client IP across the whole API. This is an
+        # application-level guard against scripted abuse — an L3/L4 flood belongs
+        # on the edge, not here.
+        api_global:
+            policy: sliding_window
+            limit: 300
+            interval: '1 minute'
+            # Without a lock the counter is a read-modify-write race, so parallel
+            # requests can slip past the limit.
+            lock_factory: lock.factory
+
+        # The probe must not share the API's quota — it has to answer precisely
+        # when the API is refusing traffic — but "not the same limiter" is not
+        # the same as "no limiter": it is unauthenticated and it touches MySQL
+        # and Redis on every call. Generous enough for any orchestrator
+        # (one probe per second per instance is already 60/min).
+        health_probe:
+            policy: sliding_window
+            limit: 120
+            interval: '1 minute'
+            lock_factory: lock.factory
+
+    cache:
+        pools:
+            # Counters must be shared by every instance: on a per-instance store
+            # the effective limit becomes 300 x number of replicas.
+            cache.rate_limiter:
+                adapter: cache.adapter.redis
+                provider: '%env(REDIS_URL)%'
+
+            # Revocation marks and spent refresh tokens, read on every
+            # authenticated request. Must be shared: a per-instance store leaves
+            # a revoked user signed in wherever the mark never reached, and
+            # catches a token replay only on the instance that issued it.
+            cache.auth_revocation:
+                adapter: cache.adapter.redis
+                provider: '%env(REDIS_URL)%'
+
+when@test:
+    framework:
+        rate_limiter:
+            api_global:
+                # The suite makes many requests from one address; throttling it
+                # would test the limiter, not the API.
+                limit: 100000

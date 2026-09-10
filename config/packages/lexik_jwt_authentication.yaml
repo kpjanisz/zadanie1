@@ -1,0 +1,20 @@
+lexik_jwt_authentication:
+    secret_key: '%env(resolve:JWT_SECRET_KEY)%'
+    public_key: '%env(resolve:JWT_PUBLIC_KEY)%'
+    pass_phrase: '%env(JWT_PASSPHRASE)%'
+
+    # Short-lived access token. Longevity is the refresh token's job, and that one
+    # is rotated, hashed at rest and revocable — an access token is none of those.
+    token_ttl: 900
+
+    # Without this, logging out takes away the refresh token and leaves the access
+    # token working for the rest of its 900 s — on a shared computer that is the
+    # whole point of clicking "log out". Enabling it also switches on Lexik's
+    # random `jti` claim, which is what the blocklist is keyed by.
+    #
+    # Deliberately per-token, not per-user: gesdinet's revocation mark refuses
+    # every JWT issued before it, so using that here would sign the user out of
+    # their other devices too. Logging out of one is not logging out of all.
+    blocklist_token:
+        enabled: true
+        cache: cache.auth_revocation

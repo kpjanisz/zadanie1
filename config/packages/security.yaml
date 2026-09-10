@@ -1,0 +1,78 @@
+security:
+    password_hashers:
+        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+
+    providers:
+        app_user_provider:
+            entity:
+                class: App\Security\Entity\User
+                property: email
+
+    firewalls:
+        dev:
+            pattern: ^/(_profiler|_wdt|assets|build)/
+            security: false
+
+        # An orchestrator has no credentials and must be able to probe the
+        # service precisely when authentication is what is broken.
+        health:
+            pattern: ^/health$
+            security: false
+
+        # Issuing and refreshing tokens. Separate from `api` so that the login
+        # listener never runs on ordinary API traffic.
+        auth:
+            pattern: ^/api/auth
+            stateless: true
+            provider: app_user_provider
+            user_checker: App\Security\UserChecker
+            json_login:
+                check_path: api_auth_login
+                username_path: email
+                password_path: password
+                success_handler: lexik_jwt_authentication.handler.authentication_success
+                failure_handler: lexik_jwt_authentication.handler.authentication_failure
+            # Credential stuffing protection, per username and per IP.
+            login_throttling:
+                max_attempts: 5
+                interval: '1 minute'
+            refresh_jwt:
+                check_path: gesdinet_jwt_refresh_token
+            # Without this there is no way to end a session: the refresh token
+            # would live its full 30 days and only a manual DELETE could stop it.
+            logout:
+                path: api_auth_logout
+                invalidate_session: false
+
+        api:
+            pattern: ^/api
+            stateless: true
+            provider: app_user_provider
+            # Checked on every request, so deactivating an account invalidates
+            # tokens already in the wild.
+            user_checker: App\Security\UserChecker
+            jwt: ~
+
+    # First match wins, so the public paths must precede the catch-all.
+    access_control:
+        - { path: ^/api/auth, roles: PUBLIC_ACCESS }
+        - { path: ^/api/docs, roles: PUBLIC_ACCESS }
+        - { path: ^/api/contexts, roles: PUBLIC_ACCESS }
+        - { path: ^/api$, roles: PUBLIC_ACCESS }
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+
+when@test:
+    security:
+        firewalls:
+            auth:
+                login_throttling:
+                    # The suite logs in repeatedly from one address; throttling it
+                    # would test the limiter, not the API.
+                    max_attempts: 100000
+        password_hashers:
+            # Hashing is deliberately slow; tests do not need that cost.
+            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+                algorithm: auto
+                cost: 4
+                time_cost: 3
+                memory_cost: 10

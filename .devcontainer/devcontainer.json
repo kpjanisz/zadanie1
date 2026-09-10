@@ -1,0 +1,66 @@
+{
+    "name": "REST API — produkty i kategorie",
+
+    // Sam devcontainer jest cienki: to tylko powłoka, w której startuje właściwy
+    // stack z compose.yaml. Dzięki temu Codespaces i maszyna lokalna uruchamiają
+    // dokładnie ten sam zestaw kontenerów, a nie dwa podobne.
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+    "features": {
+        // Docker-in-docker, NIE docker-outside-of-docker. compose.yaml montuje
+        // katalog projektu przez `.:/app`; przy gnieździe hosta te ścieżki
+        // rozwiązałyby się względem VM-ki hosta, a nie tego kontenera, więc
+        // kontenery dostałyby pusty katalog zamiast kodu.
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    },
+
+    // MySQL, Redis, PHP-FPM, nginx i Mailpit naraz. Na najmniejszej maszynie
+    // (2 rdzenie / 8 GB) mieszczą się, ale bez zapasu na równoległe budowanie.
+    "hostRequirements": {
+        "cpus": 2,
+        "memory": "8gb",
+        "storage": "32gb"
+    },
+
+    // Obraz bazowy nie gwarantuje `make`, a cały onboarding stoi na Makefile.
+    "onCreateCommand": "sudo apt-get update -qq && sudo apt-get install -y -qq make",
+
+    // Pełny onboarding — jednorazowo, przy tworzeniu codespace'a.
+    "postCreateCommand": "bash .devcontainer/setup.sh",
+
+    // Po uśpieniu i wybudzeniu codespace'a wewnętrzny demon Dockera startuje
+    // od zera, a kontenery nie wracają same. To je podnosi; przy działającym
+    // stacku jest bezczynne.
+    "postStartCommand": "docker compose up -d",
+
+    "forwardPorts": [8080, 8025, 3306],
+    "portsAttributes": {
+        "8080": {
+            "label": "API i konsola",
+            "onAutoForward": "notify"
+        },
+        "8025": {
+            "label": "Mailpit — skrzynka powiadomień",
+            "onAutoForward": "silent"
+        },
+        "3306": {
+            // Wystawiony dla klienta GUI. Aplikacja rozmawia z `mysql:3306`
+            // wewnątrz sieci Dockera i nie korzysta z tego przekierowania.
+            "label": "MySQL",
+            "onAutoForward": "silent"
+        }
+    },
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "bmewburn.vscode-intelephense-client",
+                "ms-azuretools.vscode-docker",
+                "EditorConfig.EditorConfig"
+            ],
+            "settings": {
+                "files.eol": "\n"
+            }
+        }
+    }
+}

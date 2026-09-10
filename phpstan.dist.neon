@@ -1,0 +1,25 @@
+includes:
+    - vendor/phpstan/phpstan-symfony/extension.neon
+    - vendor/phpstan/phpstan-symfony/rules.neon
+    - vendor/phpstan/phpstan-doctrine/extension.neon
+    - vendor/phpstan/phpstan-doctrine/rules.neon
+
+parameters:
+    level: 8
+    # The collection providers receive entities from Doctrine at runtime; their
+    # element type is only a PHPDoc promise, so the instanceof guards in
+    # mapToOutput() are real checks rather than tautologies.
+    treatPhpDocTypesAsCertain: false
+    paths:
+        - src/
+        - tests/
+    excludePaths:
+        analyseAndScan:
+            # Framework-owned scaffolding: called by Symfony/PHPUnit, not by us.
+            - src/Kernel.php
+            - tests/bootstrap.php
+            - tests/object-manager.php
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+    doctrine:
+        objectManagerLoader: tests/object-manager.php

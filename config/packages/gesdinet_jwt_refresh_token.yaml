@@ -1,0 +1,42 @@
+gesdinet_jwt_refresh_token:
+    refresh_token_class: App\Security\Entity\RefreshToken
+
+    # 30 days, and the window does NOT slide: a stolen token cannot be kept alive
+    # indefinitely by refreshing it.
+    ttl: 2592000
+    ttl_update: false
+
+    # Rotation: every refresh invalidates the token that was used.
+    single_use: true
+
+    # Tokens are stored hashed, so a database dump does not hand out sessions.
+    hash_tokens:
+        enabled: true
+        accept_stored_in_the_clear: false
+
+    max_tokens_per_user: 5
+    token_parameter_name: refresh_token
+
+    # Without this, revoking a user's refresh tokens still leaves every JWT
+    # already issued to them working until it expires — deactivating a
+    # compromised account or resetting a password would not actually end the
+    # session.
+    #
+    # This covers revokeAllForUser() only, which is what those two do. It is NOT
+    # what logging out uses: the mark is per user, so it would refuse every JWT
+    # the user holds anywhere, and logging out of one device is not logging out
+    # of all. Logout withdraws its own access token through Lexik's per-token
+    # blocklist (see lexik_jwt_authentication.yaml).
+    #
+    # The TTL only has to outlive those JWTs (token_ttl = 900 s).
+    block_jwts_on_revocation:
+        enabled: true
+        cache: cache.auth_revocation
+        ttl: 1800
+
+    # Replaying a rotated token is a strong signal the token was stolen; it
+    # revokes the whole chain rather than just refusing that one request.
+    reuse_detection:
+        enabled: true
+        cache: cache.auth_revocation
+        ttl: 2592000

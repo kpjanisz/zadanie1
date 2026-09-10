@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A newer push to the same branch makes the previous run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # compose.yaml runs the PHP container as the host user so bind-mounted
+      # files stay writable. The runner is not uid 1000, and $UID is a shell
+      # variable rather than an exported one, so it has to be passed explicitly.
+      - name: Match container user to the runner
+        run: |
+          echo "UID=$(id -u)" >> "$GITHUB_ENV"
+          echo "GID=$(id -g)" >> "$GITHUB_ENV"
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer-ci-cache
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Start the stack
+        run: make up
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Generate JWT key pairs
+        run: make jwt
+
+      # The suite runs against app_test, which the MySQL init script creates.
+      - name: Migrate the test database
+        run: docker compose exec -T php php bin/console doctrine:migrations:migrate --no-interaction --env=test
+
+      # Exactly the command the README tells a developer to run locally:
+      # coding standards, PHPStan level 8, linters, PHPUnit.
+      - name: make check
+        run: make check
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=200

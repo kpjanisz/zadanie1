@@ -1,0 +1,45 @@
+{# Generic notification body.
+
+   It renders whatever the notification put in getContext(), so a new
+   notification type reuses the e-mail channel without a new template. Field
+   labels are the context keys themselves — this is an operational notice, and
+   inventing a translation key per future field would defeat the point. #}
+{% extends 'mail/layout.html.twig' %}
+
+{% block subject %}{{ ('notification.' ~ type ~ '.subject')|trans({'%subjectId%': subjectId}) }}{% endblock %}
+
+{% block content %}
+    <h1 style="margin:0 0 16px; font-size:20px; color:#111827;">
+        {{ ('notification.' ~ type ~ '.subject')|trans({'%subjectId%': subjectId}) }}
+    </h1>
+
+    <p style="margin:0 0 20px; font-size:14px; line-height:1.6; color:#374151;">
+        {{ 'mail.notification.intro'|trans({
+            '%subjectType%': subjectType,
+            '%subjectId%': subjectId,
+            '%action%': action.translationKey|trans,
+        }) }}
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; font-size:14px;">
+        {% for key, value in context %}
+            <tr>
+                <td style="padding:8px 12px 8px 0; color:#6b7280; width:35%; vertical-align:top; border-bottom:1px solid #e5e7eb;">
+                    {{ key }}
+                </td>
+                <td style="padding:8px 0; color:#111827; border-bottom:1px solid #e5e7eb;">
+                    {%- if value is iterable -%}
+                        {%- for item in value -%}
+                            {{- item.code is defined ? item.code : (item is iterable ? item|json_encode : item) -}}
+                            {{- loop.last ? '' : ', ' -}}
+                        {%- else -%}
+                            &mdash;
+                        {%- endfor -%}
+                    {%- else -%}
+                        {{- value -}}
+                    {%- endif -%}
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

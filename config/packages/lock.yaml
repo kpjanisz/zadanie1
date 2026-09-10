@@ -1,0 +1,5 @@
+framework:
+    lock:
+        # Backed by the same Redis as the rate-limiter counters: a lock local to
+        # one instance would not serialise anything across replicas.
+        default: '%env(REDIS_URL)%'

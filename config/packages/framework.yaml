@@ -1,0 +1,24 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+
+    # The API is stateless: authentication travels in the Authorization header,
+    # never in a PHP session.
+    session: false
+
+    # default_locale lives in translation.yaml. A client can ask for another
+    # locale with Accept-Language and gets it if a catalogue exists.
+    enabled_locales: ['pl', 'en']
+    set_locale_from_accept_language: true
+
+    http_method_override: false
+
+    # nginx sits in front of PHP-FPM inside the Docker network, so the real client
+    # IP arrives in X-Forwarded-For. Without this, every rate limiter would key on
+    # the proxy address and throttle all clients as one.
+    trusted_proxies: '%env(TRUSTED_PROXIES)%'
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-prefix']
+
+when@test:
+    framework:
+        test: true

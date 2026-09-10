@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+parameters:
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    # Every class under src/ becomes a service, except the ones that are data, not
+    # behaviour: Doctrine entities and DTOs are constructed by the ORM/serializer.
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            - '../src/*/Entity/'
+            - '../src/*/Dto/'
+            - '../src/*/Enum/'
+
+    # --- Workaround for gesdinet/jwt-refresh-token-bundle 3.0.0 -----------------
+    # The bundle wires both cache-backed registries with
+    # `service((string) param('…cache'))`, which leaves the literal "%…%" as the
+    # service id instead of resolving it — the container then fails to compile
+    # with "non-existent service %gesdinet_jwt_refresh_token…cache%". Reproduced
+    # with the bundle's own default (cache.app), so it is not caused by our pool.
+    #
+    # Only the two broken definitions are replaced; everything else the bundle
+    # registers (the manager decorator, the JWT_DECODED listener, the reuse
+    # detector) references them by id and keeps working. Remove this block once
+    # the bundle resolves the parameter itself.
+    gesdinet_jwt_refresh_token.jwt_revocation_registry:
+        class: Gesdinet\JWTRefreshTokenBundle\Security\Revocation\CacheJWTRevocationRegistry
+        autowire: false
+        autoconfigure: false
+        arguments:
+            - '@cache.auth_revocation'
+            - '%gesdinet_jwt_refresh_token.block_jwts_on_revocation.ttl%'
+
+    gesdinet_jwt_refresh_token.spent_refresh_token_registry:
+        class: Gesdinet\JWTRefreshTokenBundle\Security\ReuseDetection\CacheSpentRefreshTokenRegistry
+        autowire: false
+        autoconfigure: false
+        arguments:
+            - '@cache.auth_revocation'
+            - '%gesdinet_jwt_refresh_token.reuse_detection.ttl%'
+
+    # Second workaround for the same bundle version: with hash_tokens on, the
+    # registry above is written under the hashed token and read under the raw
+    # one, so a replay is never recognised and the chain it belongs to is never
+    # revoked. See the decorator for the evidence.
+    App\Security\ReuseDetection\HashConsistentSpentRefreshTokenRegistry:
+        decorates: gesdinet_jwt_refresh_token.spent_refresh_token_registry
+
+    # Equalises the cost of a login for an unknown address with one for a known
+    # address, closing the user-enumeration timing oracle.
+    App\Security\TimingSafeUserProvider:
+        decorates: security.user.provider.concrete.app_user_provider
+        arguments:
+            $inner: '@.inner'
+            $hasherFactory: '@security.password_hasher_factory'

@@ -1,0 +1,33 @@
+exception:
+    precondition_failed: 'The resource has changed since it was read; re-read it and retry.'
+    category:
+        not_found: 'Category "%id%" does not exist.'
+        code_taken: 'Category code "%code%" is already taken.'
+        in_use: 'Category "%id%" is still assigned to %count% product(s) and cannot be deleted.'
+    product:
+        not_found: 'Product "%id%" does not exist.'
+        requires_category: 'A product must belong to at least one category.'
+    operation_log:
+        not_found: 'Operation log "%id%" does not exist.'
+
+security:
+    account_disabled: 'This account is disabled.'
+
+rate_limit:
+    too_many_requests: 'Too many requests. Please try again shortly.'
+
+mail:
+    layout:
+        brand: 'Products API'
+        footer: 'This message was generated automatically. Please do not reply.'
+    notification:
+        intro: '%subjectType% #%subjectId% was %action%. Details below.'
+
+notification:
+    action:
+        created: 'created'
+        deleted: 'deleted'
+        updated: 'updated'
+    product:
+        changed:
+            subject: 'Product #%subjectId% was saved'

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Konsola API — produkty i kategorie</title>
+<style>
+:root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --border: #e3e6ea;
+    --text: #14181f;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-soft: #eff4ff;
+    --ok: #15803d;
+    --warn: #b45309;
+    --err: #b91c1c;
+    --code-bg: #0f172a;
+    --code-text: #e2e8f0;
+    --radius: 8px;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0f1115;
+        --panel: #171a21;
+        --border: #272b34;
+        --text: #e6e8eb;
+        --muted: #9aa3af;
+        --accent: #60a5fa;
+        --accent-soft: #1a2233;
+        --ok: #4ade80;
+        --warn: #fbbf24;
+        --err: #f87171;
+        --code-bg: #0b0e14;
+        --code-text: #cbd5e1;
+    }
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+code, pre, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+header .links { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+header a { color: var(--accent); text-decoration: none; }
+header a:hover { text-decoration: underline; }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 20px; display: grid; gap: 16px; }
+@media (min-width: 1100px) { .wrap { grid-template-columns: 1fr 420px; align-items: start; } }
+
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+.panel > h2 {
+    margin: 0;
+    padding: 11px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+}
+.panel .body { padding: 14px; }
+
+label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+input, select, button, textarea {
+    font: inherit;
+    color: inherit;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    padding: 7px 9px;
+}
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+button {
+    background: var(--accent);
+    border-color: transparent;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 500;
+    padding: 7px 13px;
+}
+button:hover { filter: brightness(1.08); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.ghost { background: transparent; color: var(--accent); border-color: var(--border); }
+button.danger { background: transparent; color: var(--err); border-color: var(--border); }
+button.tiny { padding: 3px 8px; font-size: 12px; }
+
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.row > div { flex: 1 1 140px; min-width: 0; }
+.row > div.narrow { flex: 0 1 110px; }
+.row input, .row select { width: 100%; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-weight: 600; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+.scroll { overflow-x: auto; }
+
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); padding: 0 8px; }
+.tabs button {
+    background: transparent; color: var(--muted); border: none; border-bottom: 2px solid transparent;
+    border-radius: 0; padding: 10px 12px; font-weight: 500;
+}
+.tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+
+.pill { display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 11px; font-weight: 600; background: var(--accent-soft); color: var(--accent); }
+.pill.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.pill.err { background: color-mix(in srgb, var(--err) 15%, transparent); color: var(--err); }
+.pill.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+
+pre.out {
+    margin: 0;
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    max-height: 380px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.reqline { padding: 9px 14px; border-bottom: 1px solid var(--border); font-size: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.reqline .path { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+
+.violations { margin: 8px 0 0; padding: 9px 11px; border-radius: 6px; background: color-mix(in srgb, var(--err) 10%, transparent); font-size: 12.5px; }
+.violations ul { margin: 4px 0 0; padding-left: 18px; }
+
+.empty { padding: 22px 14px; text-align: center; color: var(--muted); font-size: 13px; }
+.hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.stack { display: grid; gap: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>Konsola API — produkty i kategorie</h1>
+    <span id="authState" class="pill warn">niezalogowany</span>
+    <span id="tokenTtl" class="small muted"></span>
+    <span class="links">
+        <a href="/api/docs" target="_blank" rel="noopener">OpenAPI / Swagger</a>
+        <a id="mailpitLink" href="http://localhost:8025" target="_blank" rel="noopener">Mailpit</a>
+    </span>
+</header>
+
+<div class="wrap">
+
+<div class="stack">
+
+    <!-- ── logowanie ─────────────────────────────────────────────── -->
+    <section class="panel">
+        <h2>Uwierzytelnianie</h2>
+        <div class="body">
+            <div class="row">
+                <div><label for="email">E-mail</label><input id="email" value="admin@example.test" autocomplete="username"></div>
+                <div><label for="password">Hasło</label><input id="password" type="password" value="DevPassw0rd!" autocomplete="current-password"></div>
+                <div class="narrow" style="flex:0 0 auto">
+                    <button id="btnLogin">Zaloguj</button>
+                </div>
+            </div>
+            <div class="row" style="margin-top:10px">
+                <div style="flex:0 0 auto"><button class="ghost" id="btnRefresh" disabled>Odśwież token</button></div>
+                <div style="flex:0 0 auto"><button class="ghost" id="btnLogout" disabled>Wyloguj</button></div>
+                <div style="flex:0 0 auto"><button class="ghost" id="btnWhoami" disabled>Sprawdź token</button></div>
+            </div>
+            <p class="hint">
+                Konta z fixtures: <code>admin@example.test</code> (ROLE_ADMIN, pełny zapis) oraz
+                <code>viewer@example.test</code> (ROLE_USER, tylko odczyt). Hasło: <code>DevPassw0rd!</code>.
+                Token trzymany jest w <code>sessionStorage</code> tej karty.
+            </p>
+        </div>
+    </section>
+
+    <!-- ── zasoby ────────────────────────────────────────────────── -->
+    <section class="panel">
+        <div class="tabs" role="tablist">
+            <button role="tab" data-tab="products" aria-selected="true">Produkty</button>
+            <button role="tab" data-tab="categories" aria-selected="false">Kategorie</button>
+            <button role="tab" data-tab="logs" aria-selected="false">Log operacji</button>
+        </div>
+
+        <!-- produkty -->
+        <div class="body tabpane" data-pane="products">
+            <div class="row">
+                <div><label for="pName">nazwa zawiera</label><input id="pName" placeholder="pralka"></div>
+                <div class="narrow"><label for="pCat">kod kategorii</label><input id="pCat" placeholder="AGD"></div>
+                <div class="narrow"><label for="pMin">cena od</label><input id="pMin" placeholder="0"></div>
+                <div class="narrow"><label for="pMax">cena do</label><input id="pMax" placeholder="9999"></div>
+                <div class="narrow"><label for="pOrder">sortowanie</label>
+                    <select id="pOrder">
+                        <option value="">domyślne</option>
+                        <option value="price:asc">cena ↑</option>
+                        <option value="price:desc">cena ↓</option>
+                        <option value="name:asc">nazwa A→Z</option>
+                        <option value="createdAt:desc">najnowsze</option>
+                    </select>
+                </div>
+                <div class="narrow"><label for="pPer">na stronę</label><input id="pPer" value="30"></div>
+                <div style="flex:0 0 auto"><button id="btnProducts">Pobierz</button></div>
+            </div>
+            <div id="productsOut" class="scroll" style="margin-top:12px"></div>
+
+            <details style="margin-top:14px">
+                <summary style="cursor:pointer;font-size:13px;font-weight:600">Nowy produkt</summary>
+                <div class="row" style="margin-top:10px">
+                    <div><label for="npName">nazwa</label><input id="npName" placeholder="Pralka Bosch"></div>
+                    <div class="narrow"><label for="npPrice">cena</label><input id="npPrice" placeholder="1299.50"></div>
+                    <div><label for="npCats">kategorie (ID, po przecinku)</label><input id="npCats" placeholder="1,2"></div>
+                    <div style="flex:0 0 auto"><button id="btnCreateProduct">Utwórz</button></div>
+                </div>
+                <p class="hint">
+                    Cena to <strong>string dziesiętny</strong> (<code>"1299.50"</code>), nie liczba JSON —
+                    pieniądze nigdy nie przechodzą przez float. Liczba da czytelne <code>400</code>.
+                </p>
+            </details>
+        </div>
+
+        <!-- kategorie -->
+        <div class="body tabpane" data-pane="categories" hidden>
+            <div class="row">
+                <div><label for="cCode">kod zawiera</label><input id="cCode" placeholder="agd"></div>
+                <div style="flex:0 0 auto"><button id="btnCategories">Pobierz</button></div>
+            </div>
+            <div id="categoriesOut" class="scroll" style="margin-top:12px"></div>
+
+            <details style="margin-top:14px">
+                <summary style="cursor:pointer;font-size:13px;font-weight:600">Nowa kategoria</summary>
+                <div class="row" style="margin-top:10px">
+                    <div class="narrow"><label for="ncCode">kod (max 10 znaków)</label><input id="ncCode" placeholder="AGD"></div>
+                    <div style="flex:0 0 auto"><button id="btnCreateCategory">Utwórz</button></div>
+                </div>
+                <p class="hint">Duplikat kodu → <code>409</code>. Kasowanie kategorii używanej przez produkty → <code>409</code>.</p>
+            </details>
+        </div>
+
+        <!-- log operacji -->
+        <div class="body tabpane" data-pane="logs" hidden>
+            <div class="row">
+                <div class="narrow"><label for="lSubjectId">ID podmiotu</label><input id="lSubjectId" placeholder="7"></div>
+                <div class="narrow"><label for="lAction">akcja</label>
+                    <select id="lAction">
+                        <option value="">wszystkie</option>
+                        <option value="created">created</option>
+                        <option value="updated">updated</option>
+                    </select>
+                </div>
+                <div class="narrow"><label for="lChannel">kanał</label>
+                    <select id="lChannel">
+                        <option value="">wszystkie</option>
+                        <option value="audit">audit</option>
+                    </select>
+                </div>
+                <div style="flex:0 0 auto"><button id="btnLogs">Pobierz</button></div>
+            </div>
+            <div id="logsOut" class="scroll" style="margin-top:12px"></div>
+            <p class="hint">
+                Ślad audytowy zapisywany przez kanał powiadomień. Tylko odczyt i tylko dla
+                <code>ROLE_ADMIN</code> — próba zapisu zwraca <code>405</code>.
+                Utwórz produkt i odśwież tę listę, żeby zobaczyć efekt.
+            </p>
+        </div>
+    </section>
+</div>
+
+<!-- ── podgląd żądania ───────────────────────────────────────────── -->
+<section class="panel" id="inspector">
+    <h2>Ostatnie żądanie</h2>
+    <div class="reqline">
+        <span id="reqMethod" class="pill">—</span>
+        <span id="reqPath" class="path mono muted">brak żądań</span>
+        <span id="reqStatus" class="pill">—</span>
+        <span id="reqTime" class="small muted"></span>
+    </div>
+    <pre class="out" id="reqBody">Zaloguj się i kliknij dowolny przycisk — tutaj pojawi się pełna odpowiedź API.</pre>
+</section>
+
+</div>
+
+<script>
+'use strict';
+
+const API = '/api';
+const $ = (id) => document.getElementById(id);
+const state = {
+    token: sessionStorage.getItem('api_token') || null,
+    refreshToken: sessionStorage.getItem('api_refresh') || null,
+};
+
+/* ── warstwa HTTP ──────────────────────────────────────────────── */
+
+async function call(method, path, body, contentType) {
+    const headers = { Accept: 'application/ld+json' };
+    if (state.token) headers.Authorization = 'Bearer ' + state.token;
+    if (body !== undefined) headers['Content-Type'] = contentType || 'application/ld+json';
+
+    const started = performance.now();
+    let response, payload = null, raw = '';
+
+    try {
+        response = await fetch(API + path, {
+            method,
+            headers,
+            body: body === undefined ? undefined : JSON.stringify(body),
+        });
+        raw = await response.text();
+        if (raw) { try { payload = JSON.parse(raw); } catch { payload = null; } }
+    } catch (networkError) {
+        showRequest(method, path, 0, performance.now() - started, String(networkError));
+        return { ok: false, status: 0, payload: null };
+    }
+
+    const elapsed = performance.now() - started;
+    showRequest(method, path, response.status, elapsed, payload ? JSON.stringify(payload, null, 2) : (raw || '(pusta odpowiedź)'));
+
+    if (response.status === 401 && state.token) markLoggedOut('token wygasł lub jest nieważny');
+
+    return { ok: response.ok, status: response.status, payload };
+}
+
+function showRequest(method, path, status, ms, text) {
+    $('reqMethod').textContent = method;
+    $('reqPath').textContent = path;
+
+    const badge = $('reqStatus');
+    badge.textContent = status || 'sieć';
+    badge.className = 'pill ' + (status >= 200 && status < 300 ? 'ok' : status >= 400 ? 'err' : 'warn');
+
+    $('reqTime').textContent = ms ? Math.round(ms) + ' ms' : '';
+    $('reqBody').textContent = text;
+}
+
+/* ── uwierzytelnianie ──────────────────────────────────────────── */
+
+function tokenExpiry() {
+    if (!state.token) return null;
+    try {
+        const claims = JSON.parse(atob(state.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        return claims.exp ? claims.exp * 1000 : null;
+    } catch { return null; }
+}
+
+function markLoggedIn() {
+    sessionStorage.setItem('api_token', state.token);
+    if (state.refreshToken) sessionStorage.setItem('api_refresh', state.refreshToken);
+    const badge = $('authState');
+    badge.textContent = 'zalogowany';
+    badge.className = 'pill ok';
+    ['btnRefresh', 'btnLogout', 'btnWhoami'].forEach((id) => { $(id).disabled = false; });
+}
+
+function markLoggedOut(reason) {
+    state.token = null;
+    state.refreshToken = null;
+    sessionStorage.removeItem('api_token');
+    sessionStorage.removeItem('api_refresh');
+    const badge = $('authState');
+    badge.textContent = reason || 'niezalogowany';
+    badge.className = 'pill warn';
+    $('tokenTtl').textContent = '';
+    ['btnRefresh', 'btnLogout', 'btnWhoami'].forEach((id) => { $(id).disabled = true; });
+}
+
+setInterval(() => {
+    const exp = tokenExpiry();
+    if (!exp) { $('tokenTtl').textContent = ''; return; }
+    const left = Math.max(0, Math.round((exp - Date.now()) / 1000));
+    $('tokenTtl').textContent = left > 0 ? `token wygasa za ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : 'token wygasł';
+}, 1000);
+
+$('btnLogin').onclick = async () => {
+    const res = await call('POST', '/auth/login', { email: $('email').value, password: $('password').value }, 'application/json');
+    if (res.ok && res.payload) {
+        state.token = res.payload.token;
+        state.refreshToken = res.payload.refresh_token;
+        markLoggedIn();
+    } else {
+        markLoggedOut('logowanie odrzucone');
+    }
+};
+
+$('btnRefresh').onclick = async () => {
+    const res = await call('POST', '/auth/refresh', { refresh_token: state.refreshToken }, 'application/json');
+    if (res.ok && res.payload) {
+        state.token = res.payload.token;
+        state.refreshToken = res.payload.refresh_token;
+        markLoggedIn();
+    }
+};
+
+$('btnLogout').onclick = async () => {
+    await call('POST', '/auth/logout', { refresh_token: state.refreshToken }, 'application/json');
+    markLoggedOut('wylogowany');
+};
+
+$('btnWhoami').onclick = () => {
+    const exp = tokenExpiry();
+    let claims = '(nie udało się zdekodować)';
+    try { claims = JSON.stringify(JSON.parse(atob(state.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))), null, 2); } catch {}
+    showRequest('LOCAL', 'dekodowanie tokenu (bez wywołania API)', 200, 0,
+        claims + (exp ? `\n\nwygasa: ${new Date(exp).toLocaleString('pl-PL')}` : ''));
+};
+
+/* ── zakładki ──────────────────────────────────────────────────── */
+
+document.querySelectorAll('[role="tab"]').forEach((tab) => {
+    tab.onclick = () => {
+        document.querySelectorAll('[role="tab"]').forEach((t) => t.setAttribute('aria-selected', String(t === tab)));
+        document.querySelectorAll('.tabpane').forEach((p) => { p.hidden = p.dataset.pane !== tab.dataset.tab; });
+    };
+});
+
+/* ── render ────────────────────────────────────────────────────── */
+
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+function renderCollection(target, payload, columns, emptyText) {
+    const el = $(target);
+    if (!payload || !Array.isArray(payload.member)) { el.innerHTML = `<div class="empty">${escapeHtml(emptyText)}</div>`; return; }
+    if (payload.member.length === 0) { el.innerHTML = '<div class="empty">Brak wyników.</div>'; return; }
+
+    const head = columns.map((c) => `<th>${escapeHtml(c.label)}</th>`).join('');
+    const rows = payload.member.map((item) =>
+        '<tr>' + columns.map((c) => `<td>${c.render(item)}</td>`).join('') + '</tr>').join('');
+
+    el.innerHTML =
+        `<div class="small muted" style="margin-bottom:6px">znaleziono: <strong>${payload.totalItems}</strong>, pokazano: ${payload.member.length}</div>` +
+        `<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function showViolations(target, payload) {
+    if (!payload || !Array.isArray(payload.violations)) return false;
+    const items = payload.violations.map((v) => `<li><code>${escapeHtml(v.propertyPath)}</code> — ${escapeHtml(v.message)}</li>`).join('');
+    $(target).innerHTML = `<div class="violations"><strong>Walidacja odrzuciła dane:</strong><ul>${items}</ul></div>`;
+    return true;
+}
+
+/* ── produkty ──────────────────────────────────────────────────── */
+
+function productQuery() {
+    const params = new URLSearchParams();
+    if ($('pName').value.trim()) params.set('name', $('pName').value.trim());
+    if ($('pCat').value.trim()) params.set('categories.code', $('pCat').value.trim());
+    if ($('pMin').value.trim()) params.set('price[gte]', $('pMin').value.trim());
+    if ($('pMax').value.trim()) params.set('price[lte]', $('pMax').value.trim());
+    if ($('pPer').value.trim()) params.set('itemsPerPage', $('pPer').value.trim());
+    if ($('pOrder').value) {
+        const [field, direction] = $('pOrder').value.split(':');
+        params.set(`order[${field}]`, direction);
+    }
+    const query = params.toString();
+    return '/products' + (query ? '?' + query : '');
+}
+
+async function loadProducts() {
+    const res = await call('GET', productQuery());
+    renderCollection('productsOut', res.payload, [
+        { label: 'ID', render: (p) => `<span class="mono">${p.id}</span>` },
+        { label: 'Nazwa', render: (p) => escapeHtml(p.name) },
+        { label: 'Cena', render: (p) => `<span class="mono">${escapeHtml(p.price)}</span>` },
+        { label: 'Kategorie', render: (p) => (p.categories || []).map((c) => `<span class="pill">${escapeHtml(c.code)}</span>`).join(' ') || '<span class="muted">—</span>' },
+        { label: 'Zaktualizowano', render: (p) => `<span class="small muted">${escapeHtml((p.updatedAt || '').replace('T', ' ').slice(0, 19))}</span>` },
+        {
+            label: '', render: (p) =>
+                `<button class="tiny ghost" data-edit="${p.id}">edytuj</button> ` +
+                `<button class="tiny danger" data-del="${p.id}">usuń</button>`
+        },
+    ], 'Zaloguj się, aby pobrać produkty.');
+
+    $('productsOut').querySelectorAll('[data-del]').forEach((b) => {
+        b.onclick = async () => {
+            if (!confirm(`Usunąć produkt #${b.dataset.del}?`)) return;
+            await call('DELETE', '/products/' + b.dataset.del);
+            loadProducts();
+        };
+    });
+    $('productsOut').querySelectorAll('[data-edit]').forEach((b) => {
+        b.onclick = async () => {
+            const name = prompt('Nowa nazwa (pusta = bez zmiany):', '');
+            const price = prompt('Nowa cena, np. 1299.50 (pusta = bez zmiany):', '');
+            const cats = prompt('Nowe ID kategorii po przecinku (puste = bez zmiany):', '');
+            const patch = {};
+            if (name) patch.name = name;
+            if (price) patch.price = price;
+            if (cats) patch.categoryIds = cats.split(',').map((s) => parseInt(s.trim(), 10)).filter(Number.isInteger);
+            if (Object.keys(patch).length === 0) return;
+            const res = await call('PATCH', '/products/' + b.dataset.edit, patch, 'application/merge-patch+json');
+            if (!res.ok) showViolations('productsOut', res.payload);
+            loadProducts();
+        };
+    });
+}
+
+$('btnProducts').onclick = loadProducts;
+
+$('btnCreateProduct').onclick = async () => {
+    const ids = $('npCats').value.split(',').map((s) => parseInt(s.trim(), 10)).filter(Number.isInteger);
+    const res = await call('POST', '/products', {
+        name: $('npName').value,
+        price: $('npPrice').value,
+        categoryIds: ids,
+    });
+    if (res.ok) { $('npName').value = ''; $('npPrice').value = ''; loadProducts(); }
+    else showViolations('productsOut', res.payload);
+};
+
+/* ── kategorie ─────────────────────────────────────────────────── */
+
+async function loadCategories() {
+    const q = $('cCode').value.trim();
+    const res = await call('GET', '/categories' + (q ? '?code=' + encodeURIComponent(q) : ''));
+    renderCollection('categoriesOut', res.payload, [
+        { label: 'ID', render: (c) => `<span class="mono">${c.id}</span>` },
+        { label: 'Kod', render: (c) => `<span class="pill">${escapeHtml(c.code)}</span>` },
+        { label: 'Utworzono', render: (c) => `<span class="small muted">${escapeHtml((c.createdAt || '').replace('T', ' ').slice(0, 19))}</span>` },
+        { label: '', render: (c) => `<button class="tiny danger" data-delcat="${c.id}">usuń</button>` },
+    ], 'Zaloguj się, aby pobrać kategorie.');
+
+    $('categoriesOut').querySelectorAll('[data-delcat]').forEach((b) => {
+        b.onclick = async () => {
+            if (!confirm(`Usunąć kategorię #${b.dataset.delcat}?`)) return;
+            await call('DELETE', '/categories/' + b.dataset.delcat);
+            loadCategories();
+        };
+    });
+}
+
+$('btnCategories').onclick = loadCategories;
+
+$('btnCreateCategory').onclick = async () => {
+    const res = await call('POST', '/categories', { code: $('ncCode').value });
+    if (res.ok) { $('ncCode').value = ''; loadCategories(); }
+    else showViolations('categoriesOut', res.payload);
+};
+
+/* ── log operacji ──────────────────────────────────────────────── */
+
+async function loadLogs() {
+    const params = new URLSearchParams();
+    if ($('lSubjectId').value.trim()) { params.set('subjectType', 'Product'); params.set('subjectId', $('lSubjectId').value.trim()); }
+    if ($('lAction').value) params.set('action', $('lAction').value);
+    if ($('lChannel').value) params.set('channel', $('lChannel').value);
+
+    const res = await call('GET', '/operation-logs' + (params.toString() ? '?' + params : ''));
+    renderCollection('logsOut', res.payload, [
+        { label: 'Kiedy', render: (l) => `<span class="small mono">${escapeHtml((l.createdAt || '').replace('T', ' ').slice(0, 19))}</span>` },
+        { label: 'Kanał', render: (l) => `<span class="pill">${escapeHtml(l.channel)}</span>` },
+        { label: 'Akcja', render: (l) => `<span class="pill ${l.action === 'created' ? 'ok' : 'warn'}">${escapeHtml(l.action)}</span>` },
+        { label: 'Podmiot', render: (l) => `<span class="mono">${escapeHtml(l.subjectType)}#${l.subjectId}</span>` },
+        { label: 'Payload', render: (l) => `<span class="small mono muted">${escapeHtml(JSON.stringify(l.payload))}</span>` },
+    ], 'Zaloguj się jako ROLE_ADMIN, aby pobrać log.');
+}
+
+$('btnLogs').onclick = loadLogs;
+
+/* ── start ─────────────────────────────────────────────────────── */
+
+/**
+ * Mailpit stoi na innym porcie niż API, więc jako jedyny link nie może być
+ * względny. Zaszyty `localhost:8025` działa tylko na własnej maszynie: przy
+ * przekierowaniu portów (Codespaces, tunel) port jest częścią nazwy hosta, a nie
+ * sufiksem `:port`, więc adres trzeba policzyć z bieżącej lokalizacji.
+ *
+ * Statyczny href w znaczniku zostaje jako sensowny domyślny dla dev-a lokalnego.
+ */
+$('mailpitLink').href = (() => {
+    const forwarded = location.hostname.match(/^(.+)-\d+(\.app\.github\.dev|\.githubpreview\.dev)$/);
+
+    return forwarded
+        ? `${location.protocol}//${forwarded[1]}-8025${forwarded[2]}`
+        : `${location.protocol}//${location.hostname}:8025`;
+})();
+
+if (state.token) markLoggedIn();
+</script>
+</body>
+</html>
